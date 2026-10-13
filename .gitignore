@@ -1,0 +1,17 @@
+# Python / Django
+venv/
+env/
+__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+staticfiles/
+.env
+.DS_Store
+
+# Django Media / Uploads
+customers/profiles/
+riders/licenses/
+riders/riders_card/
+riders/vehicles/
+media/
