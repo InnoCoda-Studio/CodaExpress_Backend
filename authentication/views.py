@@ -184,8 +184,12 @@ User = get_user_model()
 
 from .utils import send_otp_email, send_otp_sms  # Import both helpers
 
+from rest_framework.permissions import AllowAny
 
 class RequestPasswordResetOTPView(APIView):
+    # 🟢 1. Disable authentication checks completely for this endpoint
+    authentication_classes = []
+    # 🟢 2. Allow unauthenticated access
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -234,9 +238,9 @@ class RequestPasswordResetOTPView(APIView):
             )
 
         return Response({"detail": message}, status=status.HTTP_200_OK)
-
-
+    
 class VerifyPasswordResetOTPView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -250,6 +254,7 @@ class VerifyPasswordResetOTPView(APIView):
         )
     
 class ResetPasswordWithOTPView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
