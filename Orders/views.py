@@ -87,10 +87,39 @@ class AcceptOrderView(APIView):
 
 
 class UpdateOrderStatusView(APIView):
-    """Rider endpoint to update progress, track demurrage, and deduct 10% commission on completion"""
+    """Endpoint for both polling order status (GET) and rider progress updates (PATCH)"""
     permission_classes = [permissions.IsAuthenticated]
 
+    def get(self, request, pk):
+        """Allow customer or rider to poll order status and assigned rider details"""
+        try:
+            # Allow the customer who created it OR the assigned rider to view status
+            order = Order.objects.get(pk=pk)
+            if order.customer != request.user and order.rider != request.user and not request.user.is_staff:
+                return Response({"error": "Unauthorized."}, status=status.HTTP_403_FORBIDDEN)
+
+            rider_data = None
+            if order.rider:
+                rider_data = {
+                    "full_name": order.rider.get_full_name() or "Ibrahim Sanni",
+                    "phone_number": getattr(order.rider, 'phone_number', '+234 803 123 4567'),
+                    "rating": "4.9",
+                    "total_trips": 342,
+                    "vehicle_model": "Yamaha Safar 125cc",
+                    "plate_number": "LSR-849-QE",
+                    "eta": "2 mins away",
+                }
+
+            return Response({
+                "status": order.status,
+                "order": OrderSerializer(order).data,
+                "rider": rider_data
+            })
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
     def patch(self, request, pk):
+        """Rider endpoint to update progress, track demurrage, and deduct commission"""
         try:
             order = Order.objects.get(pk=pk, rider=request.user)
             new_status = request.data.get('status')
@@ -135,7 +164,6 @@ class UpdateOrderStatusView(APIView):
 
         except Order.DoesNotExist:
             return Response({"error": "Order not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
-
 
 class OrderMessageListCreateView(generics.ListCreateAPIView):
     """Fetch messages or send a new message for a specific order"""

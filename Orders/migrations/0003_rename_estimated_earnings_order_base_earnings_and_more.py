@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('Orders', '0002_order_descriptions_order_dropoff_contact_name_and_more'),
+        ('orders', '0002_order_descriptions_order_dropoff_contact_name_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
