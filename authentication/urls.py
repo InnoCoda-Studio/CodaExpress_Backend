@@ -11,6 +11,7 @@ from .views import (
     RiderProfileOnboardingView,
     verify_nin,
     VerifyBankAccountView,
+    UserProfileView
     # GoogleLoginView,
     # FacebookLoginView,
 )
@@ -24,6 +25,7 @@ urlpatterns = [
     path('request-password-reset-otp/', RequestPasswordResetOTPView.as_view(), name='request_password_reset_otp'),
     path('reset-password-otp/', ResetPasswordWithOTPView.as_view(), name='reset_password_otp'),
     path('verify-reset-otp/', VerifyPasswordResetOTPView.as_view(), name='verify-otp'),
+    path('users/me/', UserProfileView.as_view(), name='user-profile'),
 
     # path('google/', GoogleLoginView.as_view(), name='google_login'),
     # path('facebook/', FacebookLoginView.as_view(), name='facebook_login'),

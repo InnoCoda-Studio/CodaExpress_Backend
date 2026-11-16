@@ -165,6 +165,35 @@ class UpdateOrderStatusView(APIView):
         except Order.DoesNotExist:
             return Response({"error": "Order not found or unauthorized."}, status=status.HTTP_404_NOT_FOUND)
 
+
+class UpdateOrderFareView(APIView):
+    """Customer endpoint to dynamically adjust offered fare while searching"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk, customer=request.user)
+            if order.status != 'PENDING':
+                return Response(
+                    {"error": "Cannot change fare after a rider has accepted."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            new_fare = request.data.get('base_earnings') or request.data.get('fare')
+            if new_fare is None or Decimal(str(new_fare)) < Decimal('500'):
+                return Response({"error": "Invalid fare amount."}, status=status.HTTP_400_BAD_REQUEST)
+
+            order.base_earnings = Decimal(str(new_fare))
+            order.save()
+            return Response({
+                "message": "Fare updated successfully.",
+                "order": OrderSerializer(order).data
+            })
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+            
 class OrderMessageListCreateView(generics.ListCreateAPIView):
     """Fetch messages or send a new message for a specific order"""
     serializer_class = OrderMessageSerializer

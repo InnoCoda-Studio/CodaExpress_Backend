@@ -410,3 +410,12 @@ def verify_nin(request):
             {'verified': False, 'message': 'Unable to reach identity provider. Check network connection.'},
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserRegisterSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_object(self):
+        return self.request.user
