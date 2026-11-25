@@ -36,6 +36,7 @@ from .serializers import (
     RequestPasswordResetOTPSerializer,
     ResetPasswordWithOTPSerializer,
     VerifyOTPOnlySerializer,
+    UserMeSerializer,
     # FacebookAuthSerializer,
     # GoogleAuthSerializer,
 )
@@ -270,6 +271,36 @@ class ResetPasswordWithOTPView(APIView):
         )
 
     
+# class RiderProfileOnboardingView(generics.RetrieveUpdateAPIView):
+#     serializer_class = RiderProfileSerializer
+#     authentication_classes = [JWTAuthentication]
+#     permission_classes = [permissions.IsAuthenticated]
+#     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+#     def get_object(self):
+#         profile, _ = RiderProfile.objects.get_or_create(user=self.request.user)
+#         return profile
+
+#     def update(self, request, *args, **kwargs):
+#         kwargs["partial"] = True
+#         return super().update(request, *args, **kwargs)
+
+#     def perform_update(self, serializer):
+#         instance = self.get_object()
+#         next_status = instance.verification_status
+
+#         if instance.verification_status in [
+#             RiderProfile.VerificationStatus.NEEDS_CORRECTION,
+#             RiderProfile.VerificationStatus.REJECTED,
+#         ]:
+#             next_status = RiderProfile.VerificationStatus.UNDER_REVIEW
+
+#         serializer.save(
+#             is_available=False,
+#             verification_status=next_status,
+#         )
+        
+
 class RiderProfileOnboardingView(generics.RetrieveUpdateAPIView):
     serializer_class = RiderProfileSerializer
     authentication_classes = [JWTAuthentication]
@@ -277,18 +308,36 @@ class RiderProfileOnboardingView(generics.RetrieveUpdateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_object(self):
-        profile, created = RiderProfile.objects.get_or_create(user=self.request.user)
+        profile, _ = RiderProfile.objects.get_or_create(user=self.request.user)
         return profile
 
     def update(self, request, *args, **kwargs):
-        print("=== INCOMING PATCH DATA ===", request.data)
-        kwargs['partial'] = True
+        kwargs["partial"] = True
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
-        # Automatically supply default values for required DB fields during multi-step patches
-        serializer.save(is_available=False)
+        instance = self.get_object()
 
+        # Permanently lock NIN and rider profile/selfie photo once saved
+        if instance.nin_number:
+            serializer.validated_data.pop("nin_number", None)
+        if instance.live_selfie:
+            serializer.validated_data.pop("live_selfie", None)
+        if instance.rider_profile:
+            serializer.validated_data.pop("rider_profile", None)
+
+        next_status = instance.verification_status
+        if instance.verification_status in [
+            RiderProfile.VerificationStatus.NEEDS_CORRECTION,
+            RiderProfile.VerificationStatus.REJECTED,
+        ]:
+            next_status = RiderProfile.VerificationStatus.UNDER_REVIEW
+
+        serializer.save(
+            is_available=False,
+            verification_status=next_status,
+        )
+        
 # authentication/views.py
 class VerifyBankAccountView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -412,10 +461,27 @@ def verify_nin(request):
         )
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserRegisterSerializer
+    serializer_class = UserMeSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_object(self):
         return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return super().update(request, *args, **kwargs)
+    
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def me_view(request):
+    if request.method == "PATCH":
+        serializer = UserMeSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    serializer = UserMeSerializer(request.user)
+    return Response(serializer.data)

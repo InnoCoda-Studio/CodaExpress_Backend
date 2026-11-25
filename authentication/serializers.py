@@ -146,7 +146,34 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
             'profile_picture'
         ]
 
+class UserMeSerializer(serializers.ModelSerializer):
+    rider_profile = RiderProfileSerializer(read_only=True)
+    customer_profile = CustomerProfileSerializer(read_only=True)
+    is_verified = serializers.SerializerMethodField()
 
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "role",
+            "is_phone_verified",
+            "is_verified",
+            "rider_profile",
+            "customer_profile",
+        ]
+
+    def get_is_verified(self, obj):
+        rider = getattr(obj, "rider_profile", None)
+        if rider and getattr(rider, "verification_status", "") == "APPROVED":
+            return True
+        return bool(getattr(obj, "is_phone_verified", False))
+
+    
 class LoginSerializer(serializers.Serializer):
     email_or_phone = serializers.CharField(required=True)
     password = serializers.CharField(write_only=True, required=True)
